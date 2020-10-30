@@ -12,8 +12,8 @@
 
 char* source_path;
 char* object_path;
-char* intermediate_path = "./inter.txt";
-char* listing_path = "./listing.txt";
+char* intermediate_path = "/Users/gim-yeonghyeon/Desktop/inter.txt";
+char* listing_path = "/Users/gim-yeonghyeon/Desktop/listing.txt";
 
 
 char line_to_parse[LINE_MAX_LEN];
@@ -142,7 +142,6 @@ typedef struct op_node_t{
     int op_code;
     int format;
 }opnode;
-
 
 typedef struct label_node_t{
     struct label_node_t* next;
@@ -382,7 +381,7 @@ void initialize_label_hash_table(){
 
 void write_to_intermediate_file(int listing_line_num, int location_ctr, char* label, char* operator, char* operand, char* obj){
     if(strcmp("END", operator) == 0){
-        fprintf(intermediate_file, "%48s%-32s%-32s%-32s\n","",operator,operand,"");
+        fprintf(intermediate_file, "%48s%-32s%-32s%-32s\n","",operator, operand,"");
     }else{
         fprintf(intermediate_file, LISTING_FILE_PRINTING_FORMAT, location_counter, label,operator,operand);
     }
@@ -439,7 +438,8 @@ void do_path1(){
             if(getLabel(label_hash_table, 64, label) == NULL){
                 setLabel(label_hash_table, 64, label, location_counter);
             }else{
-                fprintf(intermediate_file,"%s%d\n","error : duplicated symbol!! at ",location_counter);
+                fprintf(intermediate_file, "%-16d>> error : duplicated symbol [ %s ]\n", -1 ,label);
+                printf("error : duplicated [ %s ] symbol!!\ndon't trust your .obj file !!\nplease check inter.txt\n", label);
             }
         }
         
@@ -475,7 +475,8 @@ void do_path1(){
             location_counter += 1 * op_str_to_dec(operand);
         }else if(strcmp(operator, "BASE") == 0){
         }else{
-            fprintf(intermediate_file, "%s%d\n","error : there's no such op in sic/xe at ",location_counter);
+            fprintf(intermediate_file,"%-16derror : there's no such op in sic/xe [ %s ]\n",-1 ,operator );
+            printf("error : there's no such op in sic/xe [ %s ]\ndon't trust your .obj file\nplease check inter.txt\n", operator);
         }
 
         fgets(line_to_parse,LINE_MAX_LEN,input_file);
@@ -515,18 +516,18 @@ void parse_intermediate_line(char* line_to_parse, int* address, char* label, cha
     char *ptr = strtok(line_to_parse, " ");
     
     if(strcmp(ptr, "END") != 0){
-        printf("address : %s\n",ptr);
+//        printf("address : %s\n",ptr);
         *address = (int)strtol(ptr,NULL,16);
         ptr = strtok(NULL, " ");
-        printf("label : %s\n",ptr);
+//        printf("label : %s\n",ptr);
         strcpy(label, ptr);
         ptr = strtok(NULL, " ");
-        printf("operator : %s\n",ptr);
+//        printf("operator : %s\n",ptr);
         strcpy(operator, ptr);
         ptr = strtok(NULL, " ");
         if(ptr[0] == '\n')
             ptr[0] = '\0';
-        printf("operand : %s\n",ptr);
+//        printf("operand : %s\n",ptr);
         strcpy(operand, ptr);
 //        printf("after parsing : %x %s %s %s\n", *address, label, operator, operand);
     }else{
@@ -682,7 +683,7 @@ char* generate_obj_code(int addr, char* operator, char* operand){
                 obj = op_info->op_code;
                 char* opcode_form_1 = (char*)malloc(sizeof(char)*4 + 1);
                 sprintf(opcode_form_1,"%x",obj);
-                printf("oject code : %s\n\n", opcode_form_1);
+//                printf("oject code : %s\n\n", opcode_form_1);
                 small_to_cap(opcode_form_1);
                 return opcode_form_1;
                 // just op
@@ -708,6 +709,7 @@ char* generate_obj_code(int addr, char* operator, char* operand){
                     second_reg_num = 0;
     
                 obj = obj | second_reg_num;
+                
                 char* opcode_form_2 = (char*)malloc(sizeof(char)*8 + 1);
                 sprintf(opcode_form_2,"%x",obj);
                 small_to_cap(opcode_form_2);
@@ -755,7 +757,8 @@ char* generate_obj_code(int addr, char* operator, char* operand){
                     // label이 있는 operand
                     label_info = getLabel(label_hash_table, 64, true_label);
                     if(label_info == NULL){
-                        printf("undefined symbol!\n");
+                        printf("undefined symbol : %s\ndon't trust your .obj file !!\nplease check listing.txt\n", true_label);
+                        fprintf(listing_file, "undefined symbol : %s\n", true_label);
                     }else{
                         if(operator[0] == '+'){
                             disp = label_info->address;
@@ -770,11 +773,13 @@ char* generate_obj_code(int addr, char* operator, char* operand){
                                     b = 1;
                                     p = 0;
                                     if(!(-2047 <= disp && disp <= 2048)){
-                                        printf("can't addressing!!\n");
+                                        printf("%s >> can't addressing!!\n", line_to_parse);
+                                        fprintf(listing_file,"%s >> can't addressing!!\n", line_to_parse);
                                         disp = 0;
                                     }
                                 }else{
-                                    printf("can't addressing!!\n");
+                                    printf("%s >> can't addressing!!\n", line_to_parse);
+                                    fprintf(listing_file,"%s >> can't addressing!!\n", line_to_parse);
                                     disp = 0;
                                 }
                             }
@@ -830,6 +835,7 @@ char* generate_obj_code(int addr, char* operator, char* operand){
 //                    printf("object code : %s\n\n", opcode_form_3);
                     if(n == 1 && i == 1 && b == 0 && p == 0 && x == 0 && strlen(operand) > 0){
                         add_modification_record(modification_counter_record, 3);
+                        e = e  + 0;
                     }
                     return opcode_form_3;
                     
@@ -838,8 +844,9 @@ char* generate_obj_code(int addr, char* operator, char* operand){
                     sprintf(opcode_form_4,"%08lx",obj);
                     small_to_cap(opcode_form_4);
                     if(n == 1 && i == 1 && b == 0 && p == 0 && x == 0){
-                        printf("%d",n);
+                        
                         add_modification_record(modification_counter_record, 5);
+                        e = e  + 0;
                     }
 //                    printf("object code : %s\n\n", opcode_form_4);
                     return opcode_form_4;
@@ -989,6 +996,7 @@ void do_path2(){
     char label[ADDRESS_MAX_LEN] = "";
     char operator[OPERATOR_MAX_LEN] = "";
     char operand[OPERAND_MAX_LEN] = "";
+    char program_name[32] = {' '};
     
     /* make listing file */
     listing_file = fopen(listing_path, "w");
@@ -1000,23 +1008,26 @@ void do_path2(){
     /* read first inpyt line from intermediate file*/
     fgets(line_to_parse, LINE_MAX_LEN, intermediate_file);
     parse_intermediate_line(line_to_parse, &address, label, operator, operand);
-    if(strcmp(operator,"START") == 0){
-        
-        fprintf(listing_file, LISTING_FILE_PRINTING_FORMAT, address, label, operator, operand);
+    if(strcmp(operator,"START") == 0 && address != -1){
+        fprintf(listing_file, "%-16x%-16s%-16s%-16s%-8s\n", address, label, operator, operand, "-");
 //        fgets(line_to_parse, LINE_MAX_LEN, intermediate_file);
         int starting_addr = (int)strtol(operand, NULL, 16);
-        program_start_address = starting_addr;
+        strcpy(program_name,label);
         char* header_record = generate_header_record(label, starting_addr, obj_length);
         fprintf(output_file, "%s\n", header_record);
         // write head record to object program
         init_text_record(starting_addr);
-        printf(">> object code : - \n\n");
+//        printf(">> object code : - \n\n");
         // initialize text record
     }
     
     do{
+        
         fgets(line_to_parse, LINE_MAX_LEN, intermediate_file);
         parse_intermediate_line(line_to_parse, &address, label, operator, operand);
+        
+        if(address == -1)
+            continue;
         // read line and parsing line
         
         if(strcmp(operator, "BASE") == 0){
@@ -1032,7 +1043,8 @@ void do_path2(){
             || strcmp("RESW", operator) == 0)
            &&(temp_text_record.current_length > 0)){
             write_text_record_into_obj_file();
-            printf(">> object code : - \n\n");
+            fprintf(listing_file, "%-16x%-16s%-16s%-16s%-8s\n", address, label, operator, operand, "-");
+//            printf(">> object code : - \n\n");
             continue;
         }
         
@@ -1040,16 +1052,18 @@ void do_path2(){
             char* obj_code = generate_obj_code(address, operator, operand);
             if(obj_code != NULL){
                 // 이곳에 들어오면 무조건 text_record에 들어가야 한다.
-                printf(">> object code : %s\n\n", obj_code);
+                fprintf(listing_file, "%-16x%-16s%-16s%-16s%-8s\n", address, label, operator, operand, obj_code);
+//                printf(">> object code : %s\n\n", obj_code);
                 
                 add_text_record(address, obj_code);
             }else{
-                printf(">> object code : - \n\n");
+                fprintf(listing_file, "%-16x%-16s%-16s%-16s%-8s\n", address, label, operator, operand, "-");
+//                printf(">> object code : - \n\n");
             }
         }
         
-        
     }while(strcmp(label, "END") != 0);
+    fprintf(listing_file, "%-16s%-16s%-16s%-16s%-8s\n", "", "", label, program_name, "-");
     
     if(temp_text_record.current_length > 0){
         write_text_record_into_obj_file();
@@ -1061,7 +1075,7 @@ void do_path2(){
 
 int main (int argc, char* argv[]){
     if(argc < 3){
-        printf("you need source.asm and object.asm");
+        printf("you need source.asm and object.asm !!");
         return 0;
     }else{
         source_path = argv[1];
@@ -1072,7 +1086,7 @@ int main (int argc, char* argv[]){
     output_file = fopen(object_path, "w");
 
     if(input_file == NULL || output_file == NULL){
-        printf("you need source.asm and object.obj");
+        printf("you need source.asm and object.obj !!");
         return 0;
     }
     
